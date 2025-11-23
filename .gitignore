@@ -1,0 +1,42 @@
+# .gitignore for MirrorMe WorkWell Agent
+# Ignore all files in the Idea folder (private planning and documentation)
+Idea/
+
+# Ignore agent-skills folder (contains specific integration details not for public repo)
+agent-skills/
+
+# Environment variables and secrets
+.env
+.env.local
+.env.*
+*.env
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Node modules
+node_modules/
+web-app/node_modules/
+
+# Next.js build output
+.next/
+web-app/.next/
+out/
+web-app/out/
+build/
+dist/
+
+# VS Code
+.vscode/
+
+# Python virtual environments
+venv/
+__pycache__/
+
+# Mac and Windows system files
+.DS_Store
+Thumbs.db
+

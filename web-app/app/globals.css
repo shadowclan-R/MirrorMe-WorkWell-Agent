@@ -1,0 +1,91 @@
+@import "tailwindcss";
+
+:root {
+  /* Calming Light Theme - Soft blues, greens, purples for mental wellness */
+  --background: #f8fafc;
+  --foreground: #1e293b;
+  --primary: #60a5fa;
+  /* Soft blue - trust & calm */
+  --primary-hover: #3b82f6;
+  --secondary: #8b5cf6;
+  /* Gentle purple - creativity & peace */
+  --accent: #34d399;
+  /* Soft green - balance & harmony */
+  --muted: #e2e8f0;
+  --card: #ffffff;
+  --card-hover: #f1f5f9;
+  --border: #cbd5e1;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --text-primary: #0f172a;
+  --text-secondary: #64748b;
+  --sidebar-bg: #1e293b;
+  --sidebar-text: #f1f5f9;
+}
+
+.dark {
+  /* Soothing Dark Theme - Warm grays & gentle colors for eye comfort */
+  --background: #0f172a;
+  --foreground: #e2e8f0;
+  --primary: #7dd3fc;
+  /* Lighter blue for dark mode */
+  --primary-hover: #38bdf8;
+  --secondary: #a78bfa;
+  /* Lighter purple */
+  --accent: #6ee7b7;
+  /* Lighter green */
+  --muted: #1e293b;
+  --card: #1e293b;
+  --card-hover: #334155;
+  --border: #334155;
+  --success: #34d399;
+  --warning: #fbbf24;
+  --danger: #f87171;
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --sidebar-bg: #0a0f1e;
+  --sidebar-text: #e2e8f0;
+}
+
+@layer base {
+  :root {
+    --color-background: var(--background);
+    --color-foreground: var(--foreground);
+    --font-sans: var(--font-geist-sans);
+    --font-mono: var(--font-geist-mono);
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Smooth transitions for theme switching */
+* {
+  transition-property: background-color, border-color, color, fill, stroke;
+  transition-duration: 0.3s;
+  transition-timing-function: ease;
+}
+
+/* Custom scrollbar for both themes */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--muted);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--primary);
+}
