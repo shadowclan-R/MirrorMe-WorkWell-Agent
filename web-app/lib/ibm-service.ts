@@ -107,3 +107,47 @@ export async function sendMessageToIBM(message: string, history: { role: string;
         throw error;
     }
 }
+
+/**
+ * Fetches AI-driven analytics insights.
+ * Tries IBM first, then returns null to allow fallback.
+ */
+export async function getAIAnalytics(contextData: unknown, type: 'HR' | 'EMPLOYEE' = 'HR') {
+    const systemPrompt = type === 'HR'
+        ? `You are an expert HR Data Analyst. Analyze the provided data and return a JSON object with insights.
+           Format:
+           {
+             "insights": [
+               { "type": "risk"|"trend"|"positive", "title": "string", "description": "string", "priority": "high"|"medium"|"low" }
+             ],
+             "recommendations": [
+               { "title": "string", "action": "string", "target": "string" }
+             ]
+           }
+           Keep it concise.`
+        : `You are a personal wellbeing coach. Analyze the user's data and return a JSON object.
+           Format:
+           {
+             "insights": [ ... ],
+             "recommendations": [ ... ]
+           }
+           Keep it encouraging.`;
+
+    const message = `Analyze this data: ${JSON.stringify(contextData)}`;
+
+    try {
+        // 1. Try IBM
+        console.log('Attempting to fetch analytics from IBM...');
+        const ibmResponse = await sendMessageToIBM(message, [], systemPrompt);
+
+        // Try to parse JSON from IBM response (it might be wrapped in text)
+        const jsonMatch = ibmResponse.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+            return JSON.parse(jsonMatch[0]);
+        }
+        return null;
+    } catch (ibmError) {
+        console.warn('IBM Analytics failed:', ibmError);
+        return null;
+    }
+}

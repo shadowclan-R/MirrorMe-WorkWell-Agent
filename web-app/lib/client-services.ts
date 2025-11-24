@@ -1,5 +1,6 @@
 import { supabaseBrowserClient } from './supabaseBrowserClient';
 import { analyzeSentimentWithGemini, sendMessageToGemini } from './gemini-service';
+import { sendMessageToIBM } from './ibm-service';
 
 // --- Types ---
 export type RiskLevel = 'LOW' | 'MEDIUM' | 'HIGH';
@@ -32,7 +33,7 @@ export async function analyzeSentimentService(text: string) {
 export async function submitCheckInService(
     employeeId: string,
     moodScore: number,
-    sentimentResult: any,
+    sentimentResult: { sentiment: string; score: number; emotion: string } | null,
     notes: string,
     channel: string = 'WEB'
 ): Promise<CheckInResult> {
@@ -140,7 +141,41 @@ export async function sendChatMessageService(
     uiLanguage: string
 ) {
     try {
-        const systemPrompt = uiLanguage === 'ar'
+        // 1. Fetch User Context (Latest Check-in & Risk)
+        let contextString = '';
+        const { data: latestCheckin } = await supabaseBrowserClient
+            .from('daily_checkins')
+            .select(`
+                mood_score,
+                note_text,
+                created_at,
+                analysis_logs (
+                    risk_level,
+                    sentiment,
+                    recommendation
+                )
+            `)
+            .eq('employee_id', employeeId)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single();
+
+        if (latestCheckin) {
+            const analysis = Array.isArray(latestCheckin.analysis_logs)
+                ? latestCheckin.analysis_logs[0]
+                : latestCheckin.analysis_logs;
+
+            contextString = `
+User Context:
+- Last Check-in: ${new Date(latestCheckin.created_at).toLocaleDateString()}
+- Mood Score: ${latestCheckin.mood_score}/5
+- Note: "${latestCheckin.note_text || 'No notes'}"
+- Risk Level: ${analysis?.risk_level || 'Unknown'}
+- Sentiment: ${analysis?.sentiment || 'Unknown'}
+`;
+        }
+
+        const baseSystemPrompt = uiLanguage === 'ar'
             ? `أنت "MirrorMe"، مساعد ذكي للصحة النفسية للموظفين.
                دورك هو الاستماع للموظف، تقديم الدعم العاطفي، واقتراح نصائح لتحسين جودة الحياة في العمل.
                تحدث بلهجة ودودة ومهنية. لا تقدم نصائح طبية، بل نصائح عامة للصحة النفسية.`
@@ -148,7 +183,17 @@ export async function sendChatMessageService(
                Your role is to listen, provide emotional support, and suggest tips for work-life balance.
                Be friendly and professional. Do not provide medical advice.`;
 
-        const responseText = await sendMessageToGemini(message, history, systemPrompt);
+        const systemPrompt = `${baseSystemPrompt}\n${contextString}`;
+
+        let responseText = '';
+        try {
+            // Try IBM first
+            responseText = await sendMessageToIBM(message, history, systemPrompt);
+        } catch (ibmError) {
+            console.warn('IBM Chat failed, falling back to Gemini', ibmError);
+            // Fallback to Gemini
+            responseText = await sendMessageToGemini(message, history, systemPrompt);
+        }
 
         // Log to Supabase
         await supabaseBrowserClient
@@ -174,6 +219,45 @@ export async function sendChatMessageService(
 
     } catch (error) {
         console.error('sendChatMessageService error', error);
+        throw error;
+    }
+}
+
+/**
+ * Sends a query to the HR AI Assistant with data context
+ */
+export async function askHRAssistantService(
+    question: string,
+    history: { role: string; content: string }[],
+    uiLanguage: string
+) {
+    try {
+        // 1. Fetch Data Context (HR Summary)
+        const summary = await getHRSummaryService();
+        const dataContext = JSON.stringify(summary, null, 2);
+
+        const baseSystemPrompt = uiLanguage === 'ar'
+            ? `أنت مساعد ذكي لمدير الموارد البشرية. لديك حق الوصول إلى بيانات الصحة النفسية للموظفين (ملخصة).
+               أجب عن أسئلة المدير بناءً على البيانات المقدمة. كن تحليليًا ومختصرًا.`
+            : `You are an AI assistant for the HR Manager. You have access to summarized employee wellbeing data.
+               Answer the manager's questions based on the provided data. Be analytical and concise.`;
+
+        const systemPrompt = `${baseSystemPrompt}\n\nData Context:\n${dataContext}`;
+
+        let responseText = '';
+        try {
+            // Try IBM first
+            responseText = await sendMessageToIBM(question, history, systemPrompt);
+        } catch (ibmError) {
+            console.warn('IBM HR Chat failed, falling back to Gemini', ibmError);
+            // Fallback to Gemini
+            responseText = await sendMessageToGemini(question, history, systemPrompt);
+        }
+
+        return { response: responseText };
+
+    } catch (error) {
+        console.error('askHRAssistantService error', error);
         throw error;
     }
 }

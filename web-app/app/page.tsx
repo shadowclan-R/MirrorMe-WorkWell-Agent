@@ -19,9 +19,11 @@ import HRAlertsView from '@/components/HRAlertsView';
 import LoginPage from '@/components/LoginPage';
 import { useRole } from '@/contexts/RoleContext';
 import { NotificationProvider } from '@/contexts/NotificationContext';
+import { useApp } from '@/contexts/AppContext';
 
 export default function Home() {
   const { role, setRole, isAuthenticated } = useRole();
+  const { language } = useApp();
   const [mounted, setMounted] = useState(false);
 
   // Prevent hydration mismatch by waiting for client-side mount
@@ -97,7 +99,7 @@ export default function Home() {
             </main>
             <footer className="bg-[var(--surface)] border-t border-[var(--border)] py-3 px-4 text-center">
               <p className="text-sm text-[var(--text-secondary)]">
-                صنع بواسطة فريق{' '}
+                {language === 'en' ? 'Made by team ' : 'صنع بواسطة فريق '}
                 <a
                   href="https://codksoft.com/"
                   target="_blank"
@@ -153,7 +155,7 @@ export default function Home() {
             </main>
             <footer className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 py-3 px-4 text-center">
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                صنع بواسطة فريق{' '}
+                {language === 'en' ? 'Made by team ' : 'صنع بواسطة فريق '}
                 <a
                   href="https://codksoft.com/"
                   target="_blank"

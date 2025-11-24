@@ -6,12 +6,6 @@ import { Mic, Send, Activity, Heart, AlertCircle } from 'lucide-react';
 import { useEmployeeProfile } from '@/contexts/EmployeeDataContext';
 import { analyzeSentimentService, submitCheckInService } from '@/lib/client-services';
 
-type SentimentResult = {
-    sentiment: 'POSITIVE' | 'NEGATIVE' | 'NEUTRAL';
-    score: number;
-    emotion?: string;
-};
-
 type CheckInResponse = {
     status: 'success' | 'error';
     riskLevel?: 'LOW' | 'MEDIUM' | 'HIGH';

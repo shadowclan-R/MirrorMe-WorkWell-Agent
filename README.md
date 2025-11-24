@@ -1,4 +1,21 @@
-# MirrorMe WorkWell Agent
+<div align="center">
+  <img src=".github/assets/logo.jpg" alt="MirrorMe Logo" width="300"/>
+  
+  # MirrorMe WorkWell Agent
+  
+  ### Your Digital Twin for Workplace Wellbeing
+  ### توأمك الرقمي للصحة النفسية في العمل
+  
+  [![IBM watsonx](https://img.shields.io/badge/IBM-watsonx_Orchestrate-0f62fe?style=for-the-badge&logo=ibm)](https://www.ibm.com/cloud/watsonx-orchestrate)
+  [![Next.js](https://img.shields.io/badge/Next.js-16-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
+  [![Supabase](https://img.shields.io/badge/Supabase-Database-3ECF8E?style=for-the-badge&logo=supabase)](https://supabase.com/)
+  [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
+  
+</div>
+
+---
+
+## 🌟 Overview
 
 MirrorMe WorkWell is an intelligent, agentic mental wellbeing orchestrator built on **IBM watsonx Orchestrate**. It is designed to monitor employee wellness, detect early signs of burnout, and trigger smart, automated support actions for both individuals and teams.
 

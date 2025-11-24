@@ -65,10 +65,13 @@ export default function Sidebar({ isOpen, setIsOpen, activeView, setActiveView }
                         className="flex items-center gap-2 font-bold text-xl mb-6 px-2"
                     >
                         <div className="w-8 h-8 relative rounded-lg overflow-hidden shadow-lg">
-                            <img
+                            <Image
                                 src="/logo.jpg"
                                 alt="MirrorMe Logo"
-                                className="object-cover w-full h-full"
+                                fill
+                                className="object-cover"
+                                sizes="32px"
+                                priority
                             />
                         </div>
                         <span>MirrorMe</span>

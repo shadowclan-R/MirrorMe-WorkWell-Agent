@@ -23,14 +23,29 @@ import {
     FileText,
     Send,
     Settings,
+    MessageSquare,
+    X
 } from 'lucide-react';
 import { useApp } from '@/contexts/AppContext';
-import { useState } from 'react';
+import { useState, useEffect, useRef, type ReactNode } from 'react';
 import { useHRData, type EmployeeSummary } from '@/hooks/useSupabaseData';
+import { getAIAnalytics } from '@/lib/ibm-service';
+import { askHRAssistantService } from '@/lib/client-services';
 
 type TranslationEntry = { en: string; ar: string };
 type TranslationCategory = 'departments' | 'timeReferences';
 type EmployeeStatus = 'healthy' | 'moderate' | 'at-risk';
+type RecommendationPriority = 'critical' | 'high' | 'medium' | 'low';
+
+type RecommendationCard = {
+    type: string;
+    employee: string;
+    priority: RecommendationPriority;
+    icon: ReactNode;
+    title: string;
+    message: string;
+    color: string;
+};
 
 const translations: Record<TranslationCategory, Record<string, TranslationEntry>> = {
     departments: {
@@ -66,9 +81,30 @@ export default function HRDashboardView({ onNavigateToAIAdvisor }: HRDashboardVi
     const { language } = useApp();
     const [searchQuery, setSearchQuery] = useState('');
     const [filterDepartment, setFilterDepartment] = useState('all');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const [aiInsights, setAiInsights] = useState<any>(null);
+    const [loadingAI, setLoadingAI] = useState(false);
+    const [showAssistant, setShowAssistant] = useState(false);
 
     // Fetch Real Data
     const { data: hrData, loading } = useHRData();
+
+    useEffect(() => {
+        if (hrData && !loading) {
+            const fetchAI = async () => {
+                setLoadingAI(true);
+                try {
+                    const insights = await getAIAnalytics(hrData, 'HR');
+                    if (insights) setAiInsights(insights);
+                } catch (err) {
+                    console.error('Failed to fetch AI analytics', err);
+                } finally {
+                    setLoadingAI(false);
+                }
+            };
+            void fetchAI();
+        }
+    }, [hrData, loading]);
 
     const translate = (category: TranslationCategory, key: string) =>
         getLocalizedValue(language, category, key);
@@ -163,6 +199,14 @@ export default function HRDashboardView({ onNavigateToAIAdvisor }: HRDashboardVi
                             />
                         </div>
                     </div>
+
+                    <button
+                        onClick={() => setShowAssistant(true)}
+                        className="hidden md:flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-xl text-white font-medium transition-all"
+                    >
+                        <MessageSquare className="w-5 h-5" />
+                        <span>{language === 'en' ? 'Ask AI Assistant' : 'اسأل المساعد الذكي'}</span>
+                    </button>
                 </div>
             </div>
 
@@ -246,7 +290,12 @@ export default function HRDashboardView({ onNavigateToAIAdvisor }: HRDashboardVi
             {/* Alerts and AI Advisory Section */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <AlertsCard language={language} />
-                <InsightsCard language={language} onNavigateToAIAdvisor={onNavigateToAIAdvisor} />
+                <InsightsCard
+                    language={language}
+                    onNavigateToAIAdvisor={onNavigateToAIAdvisor}
+                    aiData={aiInsights}
+                    loading={loadingAI}
+                />
             </div>
 
             {/* Employee List */}
@@ -387,11 +436,134 @@ export default function HRDashboardView({ onNavigateToAIAdvisor }: HRDashboardVi
                 <DepartmentAnalytics language={language} />
                 <TeamHealthScore language={language} />
             </div>
+
+            {/* AI Assistant Modal */}
+            {showAssistant && (
+                <HRAssistantModal
+                    language={language}
+                    onClose={() => setShowAssistant(false)}
+                />
+            )}
         </div>
     );
 }
 
 // Helper Components
+
+function HRAssistantModal({ language, onClose }: { language: string; onClose: () => void }) {
+    const [messages, setMessages] = useState<{ role: string; content: string }[]>([
+        {
+            role: 'assistant',
+            content: language === 'en'
+                ? 'Hello! I have analyzed the latest HR data. Ask me anything about employee wellbeing, risk levels, or department trends.'
+                : 'مرحباً! لقد قمت بتحليل أحدث بيانات الموارد البشرية. اسألني أي شيء عن صحة الموظفين، مستويات المخاطر، أو اتجاهات الأقسام.'
+        }
+    ]);
+    const [input, setInput] = useState('');
+    const [loading, setLoading] = useState(false);
+    const scrollRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (scrollRef.current) {
+            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+        }
+    }, [messages]);
+
+    const handleSend = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!input.trim() || loading) return;
+
+        const userMsg = { role: 'user', content: input };
+        setMessages(prev => [...prev, userMsg]);
+        setInput('');
+        setLoading(true);
+
+        try {
+            const { response } = await askHRAssistantService(input, messages, language);
+            setMessages(prev => [...prev, { role: 'assistant', content: response }]);
+        } catch (error) {
+            console.error(error);
+            setMessages(prev => [...prev, {
+                role: 'assistant',
+                content: language === 'en' ? 'Sorry, I encountered an error analyzing the data.' : 'عذراً، واجهت خطأ في تحليل البيانات.'
+            }]);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-[var(--card)] w-full max-w-2xl rounded-2xl shadow-2xl flex flex-col max-h-[80vh]">
+                {/* Header */}
+                <div className="p-4 border-b border-[var(--border)] flex items-center justify-between bg-gradient-to-r from-[var(--primary)] to-[var(--secondary)] text-white rounded-t-2xl">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-white/20 rounded-lg">
+                            <Brain className="w-6 h-6" />
+                        </div>
+                        <div>
+                            <h3 className="font-bold text-lg">
+                                {language === 'en' ? 'HR AI Assistant' : 'مساعد الموارد البشرية الذكي'}
+                            </h3>
+                            <p className="text-xs opacity-80">
+                                {language === 'en' ? 'Powered by IBM Watsonx' : 'مدعوم بواسطة IBM Watsonx'}
+                            </p>
+                        </div>
+                    </div>
+                    <button onClick={onClose} className="p-2 hover:bg-white/20 rounded-lg transition-colors">
+                        <X className="w-5 h-5" />
+                    </button>
+                </div>
+
+                {/* Chat Area */}
+                <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-[var(--background)]" ref={scrollRef}>
+                    {messages.map((msg, idx) => (
+                        <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                            <div className={`max-w-[80%] p-3 rounded-2xl ${msg.role === 'user'
+                                ? 'bg-[var(--primary)] text-white rounded-br-sm'
+                                : 'bg-[var(--muted)] text-[var(--text-primary)] rounded-bl-sm'
+                                }`}>
+                                <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                            </div>
+                        </div>
+                    ))}
+                    {loading && (
+                        <div className="flex justify-start">
+                            <div className="bg-[var(--muted)] p-3 rounded-2xl rounded-bl-sm">
+                                <div className="flex gap-1">
+                                    <div className="w-2 h-2 bg-[var(--text-secondary)] rounded-full animate-bounce"></div>
+                                    <div className="w-2 h-2 bg-[var(--text-secondary)] rounded-full animate-bounce delay-75"></div>
+                                    <div className="w-2 h-2 bg-[var(--text-secondary)] rounded-full animate-bounce delay-150"></div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                {/* Input Area */}
+                <form onSubmit={handleSend} className="p-4 border-t border-[var(--border)] bg-[var(--card)] rounded-b-2xl">
+                    <div className="flex gap-2">
+                        <input
+                            type="text"
+                            value={input}
+                            onChange={(e) => setInput(e.target.value)}
+                            placeholder={language === 'en' ? 'Ask about trends, risks, or specific departments...' : 'اسأل عن الاتجاهات، المخاطر، أو أقسام محددة...'}
+                            className="flex-1 px-4 py-2 bg-[var(--muted)] border border-[var(--border)] rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
+                            disabled={loading}
+                        />
+                        <button
+                            type="submit"
+                            disabled={!input.trim() || loading}
+                            className="p-2 bg-[var(--primary)] text-white rounded-xl hover:opacity-90 disabled:opacity-50 transition-all"
+                        >
+                            <Send className="w-5 h-5" />
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+}
 
 function QuickStat({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
     return (
@@ -512,8 +684,32 @@ function AlertsCard({ language }: { language: string }) {
     );
 }
 
-function InsightsCard({ language, onNavigateToAIAdvisor }: { language: string; onNavigateToAIAdvisor?: () => void }) {
-    const aiRecommendations = [
+function InsightsCard({
+    language,
+    onNavigateToAIAdvisor,
+    aiData,
+    loading
+}: {
+    language: string;
+    onNavigateToAIAdvisor?: () => void;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    aiData?: any;
+    loading?: boolean;
+}) {
+    // Parse AI Data if available
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const recommendations: RecommendationCard[] = aiData?.recommendations?.map((rec: any): RecommendationCard => ({
+        type: 'ai-generated',
+        employee: rec.target || 'Team',
+        priority: 'high', // Default priority for AI suggestions
+        icon: '🤖',
+        title: rec.title,
+        message: rec.action,
+        color: 'bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800'
+    })) || [];
+
+    // Use AI recommendations if available, otherwise fallback to hardcoded defaults (full list)
+    const displayRecs: RecommendationCard[] = (recommendations.length > 0) ? recommendations : [
         {
             type: 'vacation',
             employee: 'Sara Al-Fahad',
@@ -546,43 +742,10 @@ function InsightsCard({ language, onNavigateToAIAdvisor }: { language: string; o
                 ? 'Sales team stress levels increasing. Schedule a stress management workshop next week.'
                 : 'مستويات الضغط في فريق المبيعات ترتفع. جدول ورشة عمل لإدارة الضغط الأسبوع القادم.',
             color: 'bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800'
-        },
-        {
-            type: 'recognition',
-            employee: 'Mohammed Al-Rashid',
-            priority: 'normal',
-            icon: '⭐',
-            title: language === 'en' ? 'Recognition Opportunity' : 'فرصة للتقدير',
-            message: language === 'en'
-                ? 'Mohammed maintains excellent wellbeing score. Public recognition will reinforce positive behavior and boost team morale.'
-                : 'محمد يحافظ على درجة صحة ممتازة. التقدير العلني سيعزز السلوك الإيجابي ويرفع معنويات الفريق.',
-            color: 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
-        },
-        {
-            type: 'intervention',
-            employee: 'Multiple High-Risk',
-            priority: 'critical',
-            icon: '🚨',
-            title: language === 'en' ? 'Burnout Prevention Required' : 'الوقاية من الاحتراق الوظيفي',
-            message: language === 'en'
-                ? '8 employees showing burnout symptoms. Immediate intervention: reduce workload, offer flexible hours, and schedule 1-on-1 meetings.'
-                : '8 موظفين يظهرون أعراض احتراق وظيفي. تدخل فوري: تقليل العبء، توفير ساعات مرنة، وجدولة اجتماعات فردية.',
-            color: 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
-        },
-        {
-            type: 'retention',
-            employee: 'HR Department',
-            priority: 'high',
-            icon: '🎯',
-            title: language === 'en' ? 'Retention Strategy Alert' : 'تنبيه استراتيجية الاحتفاظ',
-            message: language === 'en'
-                ? 'HR team loyalty score dipping. Consider career development opportunities and performance bonuses to maintain retention.'
-                : 'درجة ولاء فريق الموارد البشرية تنخفض. فكر في فرص التطور الوظيفي ومكافآت الأداء للحفاظ على الاحتفاظ.',
-            color: 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800'
         }
     ];
 
-    const getPriorityIcon = (priority: string) => {
+    const getPriorityIcon = (priority: RecommendationPriority) => {
         switch (priority) {
             case 'critical': return <AlertTriangle className="w-4 h-4 text-red-600" />;
             case 'high': return <TrendingUp className="w-4 h-4 text-orange-600" />;
@@ -603,9 +766,11 @@ function InsightsCard({ language, onNavigateToAIAdvisor }: { language: string; o
                             {language === 'en' ? 'AI Wellbeing Advisor' : 'المستشار الذكي للصحة النفسية'}
                         </h3>
                         <p className="text-xs text-[var(--text-secondary)]">
-                            {language === 'en'
-                                ? 'Smart recommendations to maintain team wellbeing & prevent burnout'
-                                : 'توصيات ذكية للحفاظ على صحة الفريق ومنع الاحتراق الوظيفي'}
+                            {loading
+                                ? (language === 'en' ? 'Analyzing data...' : 'جاري تحليل البيانات...')
+                                : (language === 'en'
+                                    ? 'Smart recommendations to maintain team wellbeing & prevent burnout'
+                                    : 'توصيات ذكية للحفاظ على صحة الفريق ومنع الاحتراق الوظيفي')}
                         </p>
                     </div>
                 </div>
@@ -618,7 +783,7 @@ function InsightsCard({ language, onNavigateToAIAdvisor }: { language: string; o
             </div>
 
             <div className="space-y-3 max-h-[500px] overflow-y-auto">
-                {aiRecommendations.map((rec, idx) => (
+                {displayRecs.map((rec, idx) => (
                     <div
                         key={idx}
                         className={`p-4 rounded-xl border-2 ${rec.color} transition-all hover:shadow-md cursor-pointer group`}

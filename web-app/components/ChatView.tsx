@@ -50,6 +50,13 @@ export default function ChatView() {
         timestamp: 'Now',
     }), [language]);
 
+    const quickPrompts = useMemo(() => [
+        { en: "I'm feeling stressed about a deadline", ar: "أشعر بالتوتر بسبب موعد نهائي" },
+        { en: "I had a great win today!", ar: "حققت إنجازاً رائعاً اليوم!" },
+        { en: "I'm feeling a bit overwhelmed", ar: "أشعر ببعض الإرهاق" },
+        { en: "Can you give me a quick meditation?", ar: "هل يمكنك إعطائي تمرين تأمل سريع؟" }
+    ], []);
+
     useEffect(() => {
         if (chatLoading) {
             return;
@@ -544,6 +551,25 @@ export default function ChatView() {
 
             {/* Modern Input Area */}
             <div className="bg-[var(--card)] border-t border-[var(--border)] p-6 shadow-2xl">
+                {/* Quick Prompts */}
+                {messages.length <= 2 && !isProcessing && (
+                    <div className="flex gap-2 overflow-x-auto pb-3 mb-2 scrollbar-hide">
+                        {quickPrompts.map((prompt, idx) => (
+                            <button
+                                key={idx}
+                                onClick={() => {
+                                    setInputText(language === 'en' ? prompt.en : prompt.ar);
+                                    // Optional: Auto-submit
+                                    // handleSubmit(new Event('submit') as any); 
+                                }}
+                                className="whitespace-nowrap px-4 py-2 bg-[var(--muted)] hover:bg-[var(--primary)] hover:text-white text-[var(--text-secondary)] text-sm rounded-full transition-all border border-[var(--border)]"
+                            >
+                                {language === 'en' ? prompt.en : prompt.ar}
+                            </button>
+                        ))}
+                    </div>
+                )}
+
                 {/* Quick Mood Selector */}
                 <div className="mb-4">
                     <p className="text-xs font-semibold text-[var(--text-secondary)] mb-2 uppercase tracking-wider">

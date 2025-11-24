@@ -1,14 +1,17 @@
 'use client';
 
-import { Users, User, Building2, Heart, Brain, Sparkles, Shield, Activity } from 'lucide-react';
+import Image from 'next/image';
+import { Users, User, Building2, Heart, Brain, Sparkles, Shield, Activity, Lightbulb, ShieldCheck } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useState } from 'react';
+import { useApp } from '@/contexts/AppContext';
 
 type LoginPageProps = {
     onRoleSelect: (role: 'employee' | 'hr') => void;
 };
 
 export default function LoginPage({ onRoleSelect }: LoginPageProps) {
+    const { language } = useApp();
     const [hoveredCard, setHoveredCard] = useState<'employee' | 'hr' | null>(null);
 
     return (
@@ -30,10 +33,13 @@ export default function LoginPage({ onRoleSelect }: LoginPageProps) {
                 >
                     <div className="flex items-center justify-center gap-3 mb-4">
                         <div className="w-16 h-16 relative rounded-2xl overflow-hidden shadow-2xl">
-                            <img
+                            <Image
                                 src="/logo.jpg"
                                 alt="MirrorMe Logo"
-                                className="object-cover w-full h-full"
+                                fill
+                                className="object-cover"
+                                sizes="64px"
+                                priority
                             />
                         </div>
                         <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
@@ -48,12 +54,32 @@ export default function LoginPage({ onRoleSelect }: LoginPageProps) {
                     </p>
                 </motion.div>
 
+                {/* The Idea Section (Abstract) */}
+                <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.6, delay: 0.1 }}
+                    className="mb-12 max-w-3xl mx-auto text-center bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm p-6 rounded-2xl border border-white/20 dark:border-gray-700/30 shadow-sm"
+                >
+                    <div className="flex items-center justify-center gap-2 mb-3 text-purple-600 dark:text-purple-400">
+                        <Sparkles className="w-5 h-5" />
+                        <h2 className="font-semibold text-lg uppercase tracking-wider">
+                            {language === 'en' ? 'The Concept' : 'الفكرة'}
+                        </h2>
+                    </div>
+                    <p className="text-gray-700 dark:text-gray-300 leading-relaxed text-lg">
+                        {language === 'en'
+                            ? "MirrorMe creates a private 'Digital Twin' that evolves with you. It monitors your wellbeing patterns to prevent burnout before it happens, offering a safe space for reflection and proactive support."
+                            : "يقوم MirrorMe بإنشاء 'توأم رقمي' خاص يتطور معك. يراقب أنماط صحتك النفسية لمنع الاحتراق الوظيفي قبل حدوثه، موفراً مساحة آمنة للتأمل والدعم الاستباقي."}
+                    </p>
+                </motion.div>
+
                 {/* Role Selection Cards */}
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.6, delay: 0.2 }}
-                    className="grid grid-cols-1 md:grid-cols-2 gap-8"
+                    className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-16"
                 >
                     {/* Employee Card */}
                     <RoleCard
@@ -98,6 +124,36 @@ export default function LoginPage({ onRoleSelect }: LoginPageProps) {
                     />
                 </motion.div>
 
+                {/* The Vision / Why Section */}
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.6, delay: 0.3 }}
+                    className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8"
+                >
+                    <FeatureCard
+                        icon={<ShieldCheck className="w-8 h-8 text-emerald-500" />}
+                        title={language === 'en' ? 'Why MirrorMe?' : 'لماذا MirrorMe؟'}
+                        desc={language === 'en'
+                            ? 'To bridge the gap between productivity and mental health, ensuring no employee feels unheard.'
+                            : 'لسد الفجوة بين الإنتاجية والصحة النفسية، وضمان أن صوت كل موظف مسموع.'}
+                    />
+                    <FeatureCard
+                        icon={<Brain className="w-8 h-8 text-blue-500" />}
+                        title={language === 'en' ? 'Powered by IBM Watsonx' : 'مدعوم بـ IBM Watsonx'}
+                        desc={language === 'en'
+                            ? 'Leveraging enterprise-grade AI orchestration to provide accurate, secure, and actionable insights.'
+                            : 'الاستفادة من تنسيق الذكاء الاصطناعي المؤسسي لتوفير رؤى دقيقة وآمنة وقابلة للتنفيذ.'}
+                    />
+                    <FeatureCard
+                        icon={<Lightbulb className="w-8 h-8 text-amber-500" />}
+                        title={language === 'en' ? 'Proactive Care' : 'رعاية استباقية'}
+                        desc={language === 'en'
+                            ? 'Moving from reactive support to proactive prevention by detecting early signs of stress.'
+                            : 'الانتقال من الدعم التفاعلي إلى الوقاية الاستباقية من خلال الكشف عن علامات التوتر المبكرة.'}
+                    />
+                </motion.div>
+
                 {/* Footer */}
                 <motion.div
                     initial={{ opacity: 0 }}
@@ -106,11 +162,24 @@ export default function LoginPage({ onRoleSelect }: LoginPageProps) {
                     className="text-center mt-12"
                 >
                     <div className="space-y-1">
-                        <p className="text-sm text-gray-500 dark:text-gray-400">Made by codk</p>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">صنع بواسطة كودك</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                            {language === 'en' ? 'Made by codk' : 'صنع بواسطة كودك'}
+                        </p>
                     </div>
                 </motion.div>
             </div>
+        </div>
+    );
+}
+
+function FeatureCard({ icon, title, desc }: { icon: React.ReactNode; title: string; desc: string }) {
+    return (
+        <div className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-md p-5 rounded-2xl border border-white/20 dark:border-gray-700/30 shadow-sm hover:shadow-md transition-all text-center">
+            <div className="bg-white dark:bg-gray-700 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3 shadow-sm">
+                {icon}
+            </div>
+            <h3 className="font-bold text-lg text-gray-800 dark:text-gray-100 mb-2">{title}</h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">{desc}</p>
         </div>
     );
 }

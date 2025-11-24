@@ -5,10 +5,24 @@ import { useApp } from '@/contexts/AppContext';
 import { motion } from 'framer-motion';
 import { type ActivityLog } from '@/hooks/useSupabaseData';
 import { useEmployeeProfile } from '@/contexts/EmployeeDataContext';
+import { useState, useEffect } from 'react';
+import { getAIAnalytics } from '@/lib/ibm-service';
 
 export default function DashboardView({ setActiveView }: { setActiveView?: (v: 'chat' | 'dashboard' | 'profile' | 'settings' | 'report') => void }) {
     const { t } = useApp();
     const { employee: employeeData, loading } = useEmployeeProfile();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const [aiInsights, setAiInsights] = useState<any>(null);
+
+    useEffect(() => {
+        if (employeeData && !loading) {
+            getAIAnalytics(employeeData, 'EMPLOYEE')
+                .then(insights => {
+                    if (insights) setAiInsights(insights);
+                })
+                .catch(err => console.error('Failed to fetch AI employee insights', err));
+        }
+    }, [employeeData, loading]);
 
     const containerVariants = {
         hidden: { opacity: 0 },
@@ -233,7 +247,19 @@ export default function DashboardView({ setActiveView }: { setActiveView?: (v: '
                 </h3>
 
                 <div className="space-y-3">
-                    {employeeData?.insights?.slice(0, 3).map((insight: { created_at: string; sentiment: string | null; recommendation: string | null }, idx: number) => (
+                    {/* Display Live AI Insights if available, else stored insights */}
+                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                    {aiInsights?.insights?.map((insight: any, idx: number) => (
+                        <InsightItem
+                            key={`ai-${idx}`}
+                            date="Just now"
+                            emoji="🤖"
+                            text={insight.description || insight.title}
+                            textAr="رؤية مباشرة من الذكاء الاصطناعي"
+                        />
+                    ))}
+
+                    {!aiInsights && employeeData?.insights?.slice(0, 3).map((insight: { created_at: string; sentiment: string | null; recommendation: string | null }, idx: number) => (
                         <InsightItem
                             key={idx}
                             date={new Date(insight.created_at).toLocaleDateString()}
@@ -242,7 +268,8 @@ export default function DashboardView({ setActiveView }: { setActiveView?: (v: '
                             textAr="توصية بناءً على تحليلك الأخير"
                         />
                     ))}
-                    {(!employeeData?.insights || employeeData.insights.length === 0) && (
+
+                    {(!aiInsights && (!employeeData?.insights || employeeData.insights.length === 0)) && (
                         <p className="text-sm text-gray-500">No insights available yet. Complete a check-in!</p>
                     )}
                 </div>

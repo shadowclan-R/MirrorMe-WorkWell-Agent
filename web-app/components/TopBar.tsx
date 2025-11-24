@@ -46,7 +46,7 @@ export default function TopBar({ onMenuClick }: TopBarProps) {
             };
         }
         return null;
-    }, [employee, language, role]);
+    }, [employee, language, role, hrProfile?.full_name, hrProfile?.role_title]);
 
     return (
         <header className="bg-[var(--card)] border-b border-[var(--border)] px-4 py-3 flex items-center justify-between sticky top-0 z-10 shadow-sm">
