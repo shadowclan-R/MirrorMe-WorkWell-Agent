@@ -1,5 +1,5 @@
 <div align="center">
-  <img src=".github/assets/logo.jpg" alt="MirrorMe Logo" width="300"/>
+  <img src=".github/assets/logo.jpg" alt="MirrorMe Logo" width="600"/>
   
   # MirrorMe WorkWell Agent
   
